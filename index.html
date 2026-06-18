@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Signal / Noise — RNG Intention Lab</title>
-  <meta name="description" content="A single-page browser RNG intention experiment for GitHub Pages." />
+  <title>Signal / Noise - RNG Intention Lab</title>
+  <meta name="description" content="A single-page RNG intention experiment for GitHub Pages with
+  hardware TRNG support." />
   <meta name="theme-color" content="#080b12" />
   <style>
     :root {
@@ -23,7 +24,8 @@
       --shadow: 0 20px 70px rgba(0,0,0,.42);
       --radius: 22px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
     }
 
     * { box-sizing: border-box; }
@@ -77,8 +79,10 @@
       position: absolute;
       inset: -50%;
       background:
-        linear-gradient(90deg, transparent 49.65%, rgba(255,255,255,.055) 49.9%, transparent 50.25%),
-        linear-gradient(0deg, transparent 49.65%, rgba(255,255,255,.04) 49.9%, transparent 50.25%);
+        linear-gradient(90deg, transparent 49.65%, rgba(255,255,255,.055) 49.9%, transparent
+        50.25%),
+        linear-gradient(0deg, transparent 49.65%, rgba(255,255,255,.04) 49.9%, transparent
+        50.25%);
       background-size: 56px 56px;
       transform: rotate(-12deg);
       mask-image: radial-gradient(circle at center, black 0%, transparent 62%);
@@ -121,7 +125,7 @@
     }
 
     .subtitle {
-      max-width: 58ch;
+      max-width: 62ch;
       color: var(--muted);
       font-size: clamp(16px, 1.9vw, 20px);
       line-height: 1.6;
@@ -159,6 +163,7 @@
       text-transform: uppercase;
       letter-spacing: .08em;
       margin-bottom: 8px;
+      display: block;
     }
 
     .value {
@@ -177,9 +182,7 @@
       gap: 18px;
     }
 
-    .panel {
-      padding: 22px;
-    }
+    .panel { padding: 22px; }
 
     .panel h2 {
       margin: 0 0 8px;
@@ -205,9 +208,7 @@
       gap: 8px;
     }
 
-    button, select, input {
-      font: inherit;
-    }
+    button, select, input { font: inherit; }
 
     button {
       border: 0;
@@ -221,13 +222,23 @@
       user-select: none;
     }
 
-    button:hover {
+    button:hover:not(:disabled) {
       transform: translateY(-1px);
       background: rgba(255,255,255,.13);
       border-color: rgba(255,255,255,.24);
     }
 
-    button:active { transform: translateY(1px); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+    }
+
+    button:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(128,255,211,.7);
+      outline-offset: 3px;
+    }
 
     button.active {
       color: #05100c;
@@ -265,11 +276,6 @@
       color: var(--text);
       width: 100%;
       outline: none;
-    }
-
-    .field:focus {
-      border-color: rgba(128,255,211,.65);
-      box-shadow: 0 0 0 4px rgba(128,255,211,.08);
     }
 
     .meter {
@@ -348,6 +354,7 @@
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: .08em;
+      margin-right: 6px;
     }
 
     .note {
@@ -360,6 +367,17 @@
       font-family: var(--mono);
       color: var(--accent);
     }
+
+    .status {
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      border-radius: 16px;
+      padding: 12px;
+      font: 12px/1.5 var(--mono);
+      color: rgba(237,244,255,.78);
+    }
+
+    .status strong { color: var(--accent); }
 
     .footer {
       color: rgba(237,244,255,.55);
@@ -381,7 +399,8 @@
       .app { grid-template-columns: 1fr; }
       .hero { min-height: auto; }
       .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .inline { grid-template-columns: 1fr; }
+      .inline, .segmented { grid-template-columns: 1fr; }
+      .log-entry { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -392,12 +411,13 @@
 <body>
   <main class="app">
     <section class="hero" aria-label="Experiment overview">
-      <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Signal / Noise RNG Lab</div>
+      <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Signal / Noise RNG Lab</
+      div>
       <h1>Can intention tilt randomness?</h1>
       <p class="subtitle">
-        A browser-based micro-experiment inspired by consciousness-and-RNG claims:
-        choose an intention, run a stream of cryptographic random bits, and watch whether the
-        cumulative result drifts above or below chance.
+        Choose an intention, run a pre-set stream of random bits, and watch whether the cumulative
+        result drifts above or below chance. True RNG mode requires a connected hardware entropy
+        device.
       </p>
 
       <div class="experiment-card">
@@ -416,29 +436,58 @@
           </div>
           <div class="stat">
             <div class="label">Z-score</div>
-            <div class="value small" id="zScore">0.00σ</div>
+            <div class="value small" id="zScore">0.00s</div>
           </div>
         </div>
 
-        <canvas id="chart" class="spark" width="900" height="220" aria-label="Cumulative deviation chart"></canvas>
+        <canvas id="chart" class="spark" width="900" height="220" aria-label="Cumulative deviation
+        chart"></canvas>
         <div class="meter" aria-label="Bias meter"><div class="bar" id="bar"></div></div>
-        <div class="bits" id="bitStream" aria-live="polite">Press “Begin run” to generate a bitstream.</div>
+        <div class="bits" id="bitStream" aria-live="polite">Press "Begin run" to generate a
+        bitstream.</div>
       </div>
     </section>
 
     <aside class="right">
       <section class="panel">
+        <h2>RNG source</h2>
+        <p>
+          Hardware TRNG mode reads raw bytes from a connected serial entropy device. Browser mode
+          uses
+          <span class="formula">crypto.getRandomValues()</span>, a cryptographically secure PRNG
+          seeded by system entropy.
+        </p>
+
+        <div class="controls">
+          <label>
+            <span class="label">Source</span>
+            <select class="field" id="source">
+              <option value="hardware" selected>Hardware TRNG via Web Serial</option>
+              <option value="browser">Browser CSPRNG fallback</option>
+            </select>
+          </label>
+          <div class="inline">
+            <button id="connectSerial">Connect TRNG</button>
+            <button id="disconnectSerial">Disconnect</button>
+          </div>
+          <div class="status" id="rngStatus" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="panel">
         <h2>Run protocol</h2>
         <p>
-          Pick a target, settle your attention for a few breaths, then start the run.
-          The RNG produces unbiased 0/1 bits using <span class="formula">crypto.getRandomValues()</span>.
+          Select the target and run length before starting. These settings are locked during each
+          run to reduce
+          optional stopping and mid-run protocol changes.
         </p>
 
         <div class="controls">
           <div class="segmented" role="group" aria-label="Intention target">
-            <button id="targetHigh" class="active" data-target="high">More 1s</button>
-            <button id="targetLow" data-target="low">More 0s</button>
-            <button id="targetCalm" data-target="calm">Just observe</button>
+            <button id="targetHigh" class="active" data-target="high" aria-pressed="true">More
+            1s</button>
+            <button id="targetLow" data-target="low" aria-pressed="false">More 0s</button>
+            <button id="targetCalm" data-target="calm" aria-pressed="false">Just observe</button>
           </div>
 
           <div class="inline">
@@ -458,7 +507,6 @@
                 <option value="512" selected>512 bits</option>
                 <option value="1024">1,024 bits</option>
                 <option value="4096">4,096 bits</option>
-                <option value="0">Until stopped</option>
               </select>
             </label>
           </div>
@@ -475,13 +523,10 @@
         <h2>How to read it</h2>
         <p>
           In a fair binary RNG, expected ones are <span class="formula">n / 2</span>.
-          The z-score here is <span class="formula">(ones − n/2) / sqrt(n/4)</span>.
-          Larger absolute values are rarer under chance, but single sessions are exploratory,
-          not proof.
+          The z-score is <span class="formula">(ones - n/2) / sqrt(n/4)</span>.
+          Final p-values are most meaningful when the run length was chosen before the run.
         </p>
-        <p class="note" id="interpretation" style="margin-top: 12px;">
-          Waiting for data.
-        </p>
+        <p class="note" id="interpretation" style="margin-top: 12px;">Waiting for data.</p>
       </section>
 
       <section class="panel">
@@ -492,12 +537,13 @@
       </section>
 
       <section class="panel">
-        <h2>GitHub Pages notes</h2>
+        <h2>Export</h2>
         <p class="footer">
-          Save this file as <strong>index.html</strong>, commit it to a repository, then enable
-          Pages from the repository settings. Everything runs locally in the browser; no server,
-          no analytics, and no claims that results demonstrate psychic influence.
+          Export includes source, protocol, counts, z-score, p-value, timestamp, and user agent.
         </p>
+        <div class="controls">
+          <button id="exportJson">Download JSON</button>
+        </div>
       </section>
     </aside>
   </main>
@@ -515,7 +561,18 @@
       history: [],
       timer: null,
       startedAt: null,
-      runNumber: 0
+      completedAt: null,
+      runNumber: 0,
+      protocol: null,
+      records: []
+    };
+
+    const serialState = {
+      port: null,
+      reader: null,
+      queue: [],
+      reading: false,
+      connected: false
     };
 
     const bitsCount = $("bitsCount");
@@ -528,11 +585,55 @@
     const ctx = chart.getContext("2d");
     const interpretation = $("interpretation");
     const log = $("log");
+    const source = $("source");
+    const rngStatus = $("rngStatus");
 
-    function bit() {
-      const a = new Uint32Array(1);
-      crypto.getRandomValues(a);
-      return a[0] & 1;
+    const browserBit = createBrowserBitSource();
+
+    function createBrowserBitSource(bufferSize = 4096) {
+      if (!globalThis.crypto?.getRandomValues) {
+        return null;
+      }
+
+      let bytes = new Uint8Array(0);
+      let byteIndex = 0;
+      let bitIndex = 8;
+
+      function refill() {
+        bytes = new Uint8Array(bufferSize);
+        crypto.getRandomValues(bytes);
+        byteIndex = 0;
+        bitIndex = 0;
+      }
+
+      return function nextBit() {
+        if (byteIndex >= bytes.length) refill();
+
+        const value = (bytes[byteIndex] >> bitIndex) & 1;
+        bitIndex += 1;
+
+        if (bitIndex === 8) {
+          bitIndex = 0;
+          byteIndex += 1;
+        }
+
+        return value;
+      };
+    }
+
+    function hardwareBit() {
+      if (!serialState.connected || serialState.queue.length === 0) return null;
+      const byte = serialState.queue.shift();
+      return byte & 1;
+    }
+
+    function nextBit() {
+      if (state.protocol.source === "hardware") {
+        return hardwareBit();
+      }
+
+      if (!browserBit) return null;
+      return browserBit();
     }
 
     function z() {
@@ -540,24 +641,42 @@
       return (state.ones - state.n / 2) / Math.sqrt(state.n / 4);
     }
 
+    function erfApprox(x) {
+      const sign = x < 0 ? -1 : 1;
+      const absX = Math.abs(x);
+      const t = 1 / (1 + 0.3275911 * absX);
+      const a1 = 0.254829592;
+      const a2 = -0.284496736;
+      const a3 = 1.421413741;
+      const a4 = -1.453152027;
+      const a5 = 1.061405429;
+      const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-absX * absX);
+      return sign * y;
+    }
+
     function pApprox(absZ) {
-      // Fast normal two-tailed approximation using Abramowitz-Stegun erf approximation.
-      const x = absZ / Math.SQRT2;
-      const t = 1 / (1 + 0.3275911 * x);
-      const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
-      const erf = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-      return Math.max(0, Math.min(1, 2 * (1 - (0.5 * (1 + erf)))));
+      const cdf = 0.5 * (1 + erfApprox(absZ / Math.SQRT2));
+      return Math.max(0, Math.min(1, 2 * (1 - cdf)));
     }
 
     function interpretationText(score) {
       const abs = Math.abs(score);
       const p = pApprox(abs);
-      const direction = score > 0 ? "toward more 1s" : score < 0 ? "toward more 0s" : "at expectation";
-      if (state.n < 50) return "Too little data yet. Let it run a bit longer before reading the signal.";
-      if (abs < 1) return `Ordinary fluctuation: ${direction}. Two-tailed p ≈ ${p.toFixed(3)}.`;
-      if (abs < 2) return `Mild drift ${direction}. Interesting to watch, but common by chance. Two-tailed p ≈ ${p.toFixed(3)}.`;
-      if (abs < 3) return `Notable drift ${direction}. Log it, then repeat with pre-set runs. Two-tailed p ≈ ${p.toFixed(4)}.`;
-      return `Large drift ${direction}. Treat as a prompt for replication, not a conclusion. Two-tailed p ≈ ${p.toExponential(2)}.`;
+      const direction = score > 0 ? "toward more 1s" : score < 0 ? "toward more 0s" : "at
+      expectation";
+
+      if (state.n < 50) return "Too little data yet. Let the pre-set run continue before reading
+      the result.";
+      if (state.running) return `Live exploratory drift: ${direction}. Final p-value is shown when
+      the run completes.`;
+      if (abs < 1) return `Ordinary fluctuation: ${direction}. Two-tailed p approximately
+      ${p.toFixed(3)}.`;
+      if (abs < 2) return `Mild drift ${direction}. Common by chance. Two-tailed p approximately
+      ${p.toFixed(3)}.`;
+      if (abs < 3) return `Notable drift ${direction}. Repeat with pre-set runs. Two-tailed p
+      approximately ${p.toFixed(4)}.`;
+      return `Large drift ${direction}. Treat as a replication prompt, not a conclusion. Two-
+      tailed p approximately ${p.toExponential(2)}.`;
     }
 
     function resizeCanvas() {
@@ -582,9 +701,14 @@
       ctx.lineTo(w, h / 2);
       ctx.stroke();
 
+      ctx.fillStyle = "rgba(237,244,255,.55)";
+      ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      ctx.fillText("cumulative deviation from chance", 12, 22);
+      ctx.fillText("0", 12, h / 2 - 8);
+
       if (state.history.length < 2) return;
 
-      const maxDev = Math.max(8, ...state.history.map(v => Math.abs(v)));
+      const maxDev = Math.max(8, ...state.history.map((v) => Math.abs(v)));
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = "rgba(128,255,211,.95)";
       ctx.beginPath();
@@ -597,56 +721,138 @@
       });
 
       ctx.stroke();
+    }
 
-      ctx.fillStyle = "rgba(237,244,255,.55)";
-      ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-      ctx.fillText("cumulative deviation from chance", 12, 22);
-      ctx.fillText("0", 12, h / 2 - 8);
+    function updateRngStatus() {
+      const isSecure = window.isSecureContext;
+      const hasSerial = "serial" in navigator;
+      const selected = source.value;
+      const browserReady = Boolean(browserBit);
+      const hardwareReady = serialState.connected && serialState.queue.length > 0;
+
+      let status = "";
+      status += `<strong>Selected:</strong> ${selected === "hardware" ? "Hardware TRNG" : "Browser
+      CSPRNG"}<br>`;
+      status += `<strong>Secure context:</strong> ${isSecure ? "yes" : "no"}<br>`;
+      status += `<strong>Web Serial:</strong> ${hasSerial ? "available" : "unavailable"}<br>`;
+      status += `<strong>Hardware:</strong> ${serialState.connected ? `connected,
+      ${serialState.queue.length} bytes buffered` : "not connected"}<br>`;
+      status += `<strong>Browser crypto:</strong> ${browserReady ? "available" : "unavailable"}
+      <br>`;
+
+      if (selected === "hardware" && !hardwareReady) {
+        status += "<strong>Run status:</strong> connect a hardware TRNG that streams raw random
+        bytes.";
+      } else if (selected === "browser") {
+        status += "<strong>Run status:</strong> available, but this is not a physical true RNG.";
+      } else {
+        status += "<strong>Run status:</strong> true RNG source ready.";
+      }
+
+      rngStatus.innerHTML = status;
+      updateRunAvailability();
+    }
+
+    function updateRunAvailability() {
+      const selected = source.value;
+      const canRunHardware = selected === "hardware" && serialState.connected &&
+      serialState.queue.length > 0;
+      const canRunBrowser = selected === "browser" && Boolean(browserBit);
+      $("toggle").disabled = !state.running && !(canRunHardware || canRunBrowser);
     }
 
     function update() {
       const score = z();
-      const deviation = state.ones - state.n / 2;
 
       bitsCount.textContent = state.n.toLocaleString();
       onesCount.textContent = state.ones.toLocaleString();
       zerosCount.textContent = state.zeros.toLocaleString();
-      zScore.textContent = `${score >= 0 ? "+" : ""}${score.toFixed(2)}σ`;
+      zScore.textContent = `${score >= 0 ? "+" : ""}${score.toFixed(2)}s`;
 
-      const width = Math.min(100, Math.abs(score) * 18);
+      const width = Math.min(50, Math.abs(score) * 9);
       bar.style.width = `${width}%`;
       bar.style.marginLeft = score < 0 ? `${50 - width}%` : "50%";
 
       interpretation.textContent = interpretationText(score);
 
       const lastBits = state.ticks.slice(-384).join("");
-      bitStream.textContent = lastBits ? lastBits.replace(/(.{8})/g, "$1 ") : "Press “Begin run” to generate a bitstream.";
+      bitStream.textContent = lastBits ? lastBits.replace(/(.{8})/g, "$1 ") : 'Press "Begin run"
+      to generate a bitstream.';
 
       draw();
+      updateRngStatus();
+    }
+
+    function clearLogNote() {
+      const note = log.querySelector(".note");
+      if (note) note.remove();
     }
 
     function addLog(kind, text, score = z()) {
-      if (log.querySelector(".note")) log.innerHTML = "";
+      clearLogNote();
+
       const row = document.createElement("div");
       row.className = "log-entry";
-      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      row.innerHTML = `<span>${time}</span><span><span class="tag">${kind}</span> ${text}</span><strong>${score >= 0 ? "+" : ""}${score.toFixed(2)}σ</strong>`;
+
+      const time = document.createElement("span");
+      time.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit",
+      second: "2-digit" });
+
+      const body = document.createElement("span");
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = kind;
+      body.append(tag, document.createTextNode(text));
+
+      const stat = document.createElement("strong");
+      stat.textContent = `${score >= 0 ? "+" : ""}${score.toFixed(2)}s`;
+
+      row.append(time, body, stat);
       log.prepend(row);
     }
 
+    function setControlsLocked(locked) {
+      source.disabled = locked;
+      $("rate").disabled = locked;
+      $("limit").disabled = locked;
+      $("targetHigh").disabled = locked;
+      $("targetLow").disabled = locked;
+      $("targetCalm").disabled = locked;
+      $("connectSerial").disabled = locked;
+      $("disconnectSerial").disabled = locked;
+    }
+
+    function resetRunData() {
+      state.n = 0;
+      state.ones = 0;
+      state.zeros = 0;
+      state.ticks = [];
+      state.history = [];
+      state.startedAt = null;
+      state.completedAt = null;
+    }
+
     function step() {
-      const rate = Number($("rate").value);
-      const limit = Number($("limit").value);
+      const rate = state.protocol.rate;
+      const limit = state.protocol.limit;
 
       for (let i = 0; i < rate; i++) {
-        const b = bit();
+        const b = nextBit();
+
+        if (b === null) {
+          addLog("wait", "random bytes unavailable; run paused");
+          break;
+        }
+
         state.ticks.push(b);
-        state.n++;
-        if (b) state.ones++;
-        else state.zeros++;
+        state.n += 1;
+
+        if (b) state.ones += 1;
+        else state.zeros += 1;
+
         state.history.push(state.ones - state.n / 2);
 
-        if (limit && state.n >= limit) {
+        if (state.n >= limit) {
           stop(true);
           break;
         }
@@ -657,55 +863,207 @@
 
     function start() {
       if (state.running) return;
+
+      resetRunData();
+
+      state.protocol = {
+        source: source.value,
+        target: state.target,
+        rate: Number($("rate").value),
+        limit: Number($("limit").value),
+        userAgent: navigator.userAgent
+      };
+
+      if (state.protocol.source === "hardware" && !serialState.connected) {
+        addLog("error", "hardware TRNG is not connected");
+        return;
+      }
+
       state.running = true;
       state.startedAt = new Date();
-      state.runNumber++;
+      state.runNumber += 1;
+
+      setControlsLocked(true);
       $("toggle").textContent = "Stop run";
-      addLog("run", `#${state.runNumber} started · target: ${labelForTarget(state.target)}`);
+
+      addLog("run", ` #${state.runNumber} started - ${sourceLabel(state.protocol.source)} -
+      target: ${labelForTarget(state.protocol.target)} - ${state.protocol.limit} bits`);
       state.timer = setInterval(step, 1000);
       step();
     }
 
     function stop(completed = false) {
       if (!state.running) return;
+
       state.running = false;
       clearInterval(state.timer);
       state.timer = null;
+      state.completedAt = new Date();
+
+      setControlsLocked(false);
       $("toggle").textContent = "Begin run";
+
       const score = z();
-      const duration = state.startedAt ? Math.round((Date.now() - state.startedAt.getTime()) / 1000) : 0;
-      addLog(completed ? "done" : "stop", `${state.n.toLocaleString()} bits · ${duration}s · ${state.ones} ones / ${state.zeros} zeros`, score);
+      const duration = state.startedAt ? Math.round((Date.now() - state.startedAt.getTime()) /
+      1000) : 0;
+      const p = pApprox(Math.abs(score));
+      const kind = completed ? "done" : "stop";
+
+      addLog(kind, ` ${state.n.toLocaleString()} bits - ${duration}s - ${state.ones} ones /
+      ${state.zeros} zeros - p~${p.toPrecision(3)}`, score);
+
+      state.records.push({
+        runNumber: state.runNumber,
+        completed,
+        startedAt: state.startedAt?.toISOString() || null,
+        completedAt: state.completedAt?.toISOString() || null,
+        durationSeconds: duration,
+        protocol: state.protocol,
+        bits: state.n,
+        ones: state.ones,
+        zeros: state.zeros,
+        zScore: score,
+        pApproxTwoTailed: p,
+        bitStream: state.ticks.join("")
+      });
+
       update();
     }
 
     function reset() {
-      stop(false);
-      state.n = 0;
-      state.ones = 0;
-      state.zeros = 0;
-      state.ticks = [];
-      state.history = [];
-      state.startedAt = null;
+      if (state.running) stop(false);
+      resetRunData();
+      state.protocol = null;
       update();
-      addLog("reset", "session cleared", 0);
+      addLog("reset", " session cleared", 0);
     }
 
     function labelForTarget(target) {
       return target === "high" ? "more 1s" : target === "low" ? "more 0s" : "observe";
     }
 
-    document.querySelectorAll("[data-target]").forEach(button => {
+    function sourceLabel(value) {
+      return value === "hardware" ? "hardware TRNG" : "browser CSPRNG";
+    }
+
+    async function connectSerial() {
+      if (!("serial" in navigator)) {
+        addLog("error", " Web Serial is unavailable in this browser");
+        updateRngStatus();
+        return;
+      }
+
+      try {
+        serialState.port = await navigator.serial.requestPort();
+        await serialState.port.open({ baudRate: 115200 });
+        serialState.connected = true;
+        serialState.reading = true;
+        addLog("trng", " hardware TRNG connected");
+        readSerialLoop();
+      } catch (error) {
+        addLog("error", ` serial connection failed: ${error.message}`);
+      }
+
+      updateRngStatus();
+    }
+
+    async function readSerialLoop() {
+      while (serialState.port?.readable && serialState.reading) {
+        serialState.reader = serialState.port.readable.getReader();
+
+        try {
+          while (serialState.reading) {
+            const { value, done } = await serialState.reader.read();
+            if (done) break;
+
+            if (value) {
+              for (const byte of value) {
+                serialState.queue.push(byte);
+              }
+
+              if (serialState.queue.length > 65536) {
+                serialState.queue.splice(0, serialState.queue.length - 65536);
+              }
+
+              updateRngStatus();
+            }
+          }
+        } catch (error) {
+          addLog("error", ` serial read failed: ${error.message}`);
+        } finally {
+          serialState.reader.releaseLock();
+        }
+      }
+    }
+
+    async function disconnectSerial() {
+      serialState.reading = false;
+
+      try {
+        if (serialState.reader) {
+          await serialState.reader.cancel();
+        }
+
+        if (serialState.port) {
+          await serialState.port.close();
+        }
+      } catch (error) {
+        addLog("error", ` serial disconnect failed: ${error.message}`);
+      }
+
+      serialState.reader = null;
+      serialState.port = null;
+      serialState.connected = false;
+      serialState.queue = [];
+
+      addLog("trng", " hardware TRNG disconnected");
+      updateRngStatus();
+    }
+
+    function exportJson() {
+      const payload = {
+        app: "Signal / Noise RNG Lab",
+        version: "2026-06-18",
+        exportedAt: new Date().toISOString(),
+        note: "Hardware source is a physical TRNG only when Web Serial hardware mode is connected.
+        Browser source is crypto.getRandomValues(), a cryptographically secure PRNG seeded by
+        system entropy.",
+        records: state.records
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `rng-session-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.querySelectorAll("[data-target]").forEach((button) => {
       button.addEventListener("click", () => {
-        document.querySelectorAll("[data-target]").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll("[data-target]").forEach((b) => {
+          b.classList.remove("active");
+          b.setAttribute("aria-pressed", "false");
+        });
+
         button.classList.add("active");
+        button.setAttribute("aria-pressed", "true");
         state.target = button.dataset.target;
-        addLog("target", labelForTarget(state.target));
+        addLog("target", ` ${labelForTarget(state.target)}`);
       });
     });
 
     $("toggle").addEventListener("click", () => state.running ? stop(false) : start());
     $("reset").addEventListener("click", reset);
-    $("mark").addEventListener("click", () => addLog("mark", `${state.n.toLocaleString()} bits · ${state.ones} ones / ${state.zeros} zeros`));
+    $("mark").addEventListener("click", () => addLog("mark", ` ${state.n.toLocaleString()} bits -
+    ${state.ones} ones / ${state.zeros} zeros`));
+    $("connectSerial").addEventListener("click", connectSerial);
+    $("disconnectSerial").addEventListener("click", disconnectSerial);
+    $("exportJson").addEventListener("click", exportJson);
+    source.addEventListener("change", updateRngStatus);
 
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
