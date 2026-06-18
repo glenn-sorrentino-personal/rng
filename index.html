@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Signal / Noise — RNG Intention Lab</title>
+  <meta name="description" content="A single-page browser RNG intention experiment for GitHub Pages." />
+  <meta name="theme-color" content="#080b12" />
+  <style>
+    :root {
+      --bg: #080b12;
+      --bg2: #0e1422;
+      --panel: rgba(255,255,255,.075);
+      --panel2: rgba(255,255,255,.045);
+      --text: #edf4ff;
+      --muted: #a9b6c8;
+      --line: rgba(255,255,255,.13);
+      --accent: #80ffd3;
+      --accent2: #9db7ff;
+      --hot: #ff8db3;
+      --warn: #ffd88a;
+      --good: #92ffa7;
+      --shadow: 0 20px 70px rgba(0,0,0,.42);
+      --radius: 22px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 15% 12%, rgba(128,255,211,.16), transparent 34%),
+        radial-gradient(circle at 85% 5%, rgba(157,183,255,.20), transparent 28%),
+        radial-gradient(circle at 45% 100%, rgba(255,141,179,.13), transparent 32%),
+        linear-gradient(160deg, var(--bg), var(--bg2) 55%, #07080d);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    body {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 26px;
+    }
+
+    .app {
+      width: min(1180px, 100%);
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 18px;
+    }
+
+    .hero, .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .hero {
+      padding: clamp(22px, 4vw, 42px);
+      min-height: calc(100vh - 52px);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -50%;
+      background:
+        linear-gradient(90deg, transparent 49.65%, rgba(255,255,255,.055) 49.9%, transparent 50.25%),
+        linear-gradient(0deg, transparent 49.65%, rgba(255,255,255,.04) 49.9%, transparent 50.25%);
+      background-size: 56px 56px;
+      transform: rotate(-12deg);
+      mask-image: radial-gradient(circle at center, black 0%, transparent 62%);
+      pointer-events: none;
+      opacity: .5;
+    }
+
+    .hero > * { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      gap: 10px;
+      align-items: center;
+      color: var(--accent);
+      font: 700 12px/1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      border: 1px solid rgba(128,255,211,.28);
+      background: rgba(128,255,211,.07);
+      padding: 9px 12px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--accent);
+      box-shadow: 0 0 18px var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 7vw, 88px);
+      line-height: .88;
+      letter-spacing: -.07em;
+      max-width: 9ch;
+    }
+
+    .subtitle {
+      max-width: 58ch;
+      color: var(--muted);
+      font-size: clamp(16px, 1.9vw, 20px);
+      line-height: 1.6;
+      margin: 24px 0 32px;
+    }
+
+    .experiment-card {
+      margin-top: auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.22);
+      padding: 18px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 18px;
+      padding: 15px;
+      min-height: 92px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: clamp(22px, 3vw, 34px);
+      letter-spacing: -.04em;
+      white-space: nowrap;
+    }
+
+    .value.small { font-size: clamp(17px, 2vw, 24px); }
+
+    .right {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 22px;
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      letter-spacing: -.03em;
+    }
+
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    button, select, input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      color: var(--text);
+      border-radius: 16px;
+      background: rgba(255,255,255,.09);
+      border: 1px solid var(--line);
+      padding: 13px 14px;
+      cursor: pointer;
+      transition: transform .14s ease, border-color .14s ease, background .14s ease;
+      user-select: none;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.13);
+      border-color: rgba(255,255,255,.24);
+    }
+
+    button:active { transform: translateY(1px); }
+
+    button.active {
+      color: #05100c;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      font-weight: 800;
+    }
+
+    .primary {
+      font-size: 18px;
+      font-weight: 850;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(128,255,211,.92), rgba(157,183,255,.92));
+      color: #061019;
+      border: 0;
+    }
+
+    .danger {
+      color: var(--hot);
+      border-color: rgba(255,141,179,.28);
+      background: rgba(255,141,179,.08);
+    }
+
+    .inline {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field {
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 16px;
+      padding: 13px;
+      color: var(--text);
+      width: 100%;
+      outline: none;
+    }
+
+    .field:focus {
+      border-color: rgba(128,255,211,.65);
+      box-shadow: 0 0 0 4px rgba(128,255,211,.08);
+    }
+
+    .meter {
+      height: 16px;
+      width: 100%;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      margin-top: 14px;
+      position: relative;
+    }
+
+    .meter::before {
+      content: "";
+      position: absolute;
+      inset: 0 50% 0 50%;
+      width: 2px;
+      background: rgba(255,255,255,.5);
+      transform: translateX(-1px);
+      z-index: 2;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--hot), var(--warn), var(--accent), var(--accent2));
+      border-radius: inherit;
+      transition: width .12s linear, margin-left .12s linear;
+    }
+
+    .bits {
+      min-height: 96px;
+      overflow-wrap: anywhere;
+      font: 12px/1.7 var(--mono);
+      color: rgba(237,244,255,.78);
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      border-radius: 16px;
+      padding: 14px;
+      max-height: 140px;
+      overflow: hidden;
+    }
+
+    .log {
+      display: grid;
+      gap: 8px;
+      max-height: 230px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 82px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.08);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: rgba(128,255,211,.08);
+      color: var(--accent);
+      border: 1px solid rgba(128,255,211,.16);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .formula {
+      font-family: var(--mono);
+      color: var(--accent);
+    }
+
+    .footer {
+      color: rgba(237,244,255,.55);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .spark {
+      width: 100%;
+      height: 150px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.19);
+      border-radius: 18px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 12px; }
+      .app { grid-template-columns: 1fr; }
+      .hero { min-height: auto; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .inline { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero" aria-label="Experiment overview">
+      <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Signal / Noise RNG Lab</div>
+      <h1>Can intention tilt randomness?</h1>
+      <p class="subtitle">
+        A browser-based micro-experiment inspired by consciousness-and-RNG claims:
+        choose an intention, run a stream of cryptographic random bits, and watch whether the
+        cumulative result drifts above or below chance.
+      </p>
+
+      <div class="experiment-card">
+        <div class="stats-row">
+          <div class="stat">
+            <div class="label">Bits</div>
+            <div class="value" id="bitsCount">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Ones</div>
+            <div class="value" id="onesCount">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Zeros</div>
+            <div class="value" id="zerosCount">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Z-score</div>
+            <div class="value small" id="zScore">0.00σ</div>
+          </div>
+        </div>
+
+        <canvas id="chart" class="spark" width="900" height="220" aria-label="Cumulative deviation chart"></canvas>
+        <div class="meter" aria-label="Bias meter"><div class="bar" id="bar"></div></div>
+        <div class="bits" id="bitStream" aria-live="polite">Press “Begin run” to generate a bitstream.</div>
+      </div>
+    </section>
+
+    <aside class="right">
+      <section class="panel">
+        <h2>Run protocol</h2>
+        <p>
+          Pick a target, settle your attention for a few breaths, then start the run.
+          The RNG produces unbiased 0/1 bits using <span class="formula">crypto.getRandomValues()</span>.
+        </p>
+
+        <div class="controls">
+          <div class="segmented" role="group" aria-label="Intention target">
+            <button id="targetHigh" class="active" data-target="high">More 1s</button>
+            <button id="targetLow" data-target="low">More 0s</button>
+            <button id="targetCalm" data-target="calm">Just observe</button>
+          </div>
+
+          <div class="inline">
+            <label>
+              <span class="label">Bits / second</span>
+              <select class="field" id="rate">
+                <option value="16">16</option>
+                <option value="32" selected>32</option>
+                <option value="64">64</option>
+                <option value="128">128</option>
+              </select>
+            </label>
+            <label>
+              <span class="label">Run length</span>
+              <select class="field" id="limit">
+                <option value="256">256 bits</option>
+                <option value="512" selected>512 bits</option>
+                <option value="1024">1,024 bits</option>
+                <option value="4096">4,096 bits</option>
+                <option value="0">Until stopped</option>
+              </select>
+            </label>
+          </div>
+
+          <button class="primary" id="toggle">Begin run</button>
+          <div class="inline">
+            <button id="mark">Mark moment</button>
+            <button class="danger" id="reset">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>How to read it</h2>
+        <p>
+          In a fair binary RNG, expected ones are <span class="formula">n / 2</span>.
+          The z-score here is <span class="formula">(ones − n/2) / sqrt(n/4)</span>.
+          Larger absolute values are rarer under chance, but single sessions are exploratory,
+          not proof.
+        </p>
+        <p class="note" id="interpretation" style="margin-top: 12px;">
+          Waiting for data.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Session log</h2>
+        <div class="log" id="log">
+          <div class="note">Runs and marks will appear here.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>GitHub Pages notes</h2>
+        <p class="footer">
+          Save this file as <strong>index.html</strong>, commit it to a repository, then enable
+          Pages from the repository settings. Everything runs locally in the browser; no server,
+          no analytics, and no claims that results demonstrate psychic influence.
+        </p>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      running: false,
+      target: "high",
+      n: 0,
+      ones: 0,
+      zeros: 0,
+      ticks: [],
+      history: [],
+      timer: null,
+      startedAt: null,
+      runNumber: 0
+    };
+
+    const bitsCount = $("bitsCount");
+    const onesCount = $("onesCount");
+    const zerosCount = $("zerosCount");
+    const zScore = $("zScore");
+    const bar = $("bar");
+    const bitStream = $("bitStream");
+    const chart = $("chart");
+    const ctx = chart.getContext("2d");
+    const interpretation = $("interpretation");
+    const log = $("log");
+
+    function bit() {
+      const a = new Uint32Array(1);
+      crypto.getRandomValues(a);
+      return a[0] & 1;
+    }
+
+    function z() {
+      if (state.n === 0) return 0;
+      return (state.ones - state.n / 2) / Math.sqrt(state.n / 4);
+    }
+
+    function pApprox(absZ) {
+      // Fast normal two-tailed approximation using Abramowitz-Stegun erf approximation.
+      const x = absZ / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+      const erf = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return Math.max(0, Math.min(1, 2 * (1 - (0.5 * (1 + erf)))));
+    }
+
+    function interpretationText(score) {
+      const abs = Math.abs(score);
+      const p = pApprox(abs);
+      const direction = score > 0 ? "toward more 1s" : score < 0 ? "toward more 0s" : "at expectation";
+      if (state.n < 50) return "Too little data yet. Let it run a bit longer before reading the signal.";
+      if (abs < 1) return `Ordinary fluctuation: ${direction}. Two-tailed p ≈ ${p.toFixed(3)}.`;
+      if (abs < 2) return `Mild drift ${direction}. Interesting to watch, but common by chance. Two-tailed p ≈ ${p.toFixed(3)}.`;
+      if (abs < 3) return `Notable drift ${direction}. Log it, then repeat with pre-set runs. Two-tailed p ≈ ${p.toFixed(4)}.`;
+      return `Large drift ${direction}. Treat as a prompt for replication, not a conclusion. Two-tailed p ≈ ${p.toExponential(2)}.`;
+    }
+
+    function resizeCanvas() {
+      const rect = chart.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      chart.width = Math.floor(rect.width * dpr);
+      chart.height = Math.floor(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+
+    function draw() {
+      const w = chart.clientWidth;
+      const h = chart.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255,255,255,.13)";
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      if (state.history.length < 2) return;
+
+      const maxDev = Math.max(8, ...state.history.map(v => Math.abs(v)));
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "rgba(128,255,211,.95)";
+      ctx.beginPath();
+
+      state.history.forEach((dev, i) => {
+        const x = (i / (state.history.length - 1)) * w;
+        const y = h / 2 - (dev / maxDev) * (h * .42);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(237,244,255,.55)";
+      ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      ctx.fillText("cumulative deviation from chance", 12, 22);
+      ctx.fillText("0", 12, h / 2 - 8);
+    }
+
+    function update() {
+      const score = z();
+      const deviation = state.ones - state.n / 2;
+
+      bitsCount.textContent = state.n.toLocaleString();
+      onesCount.textContent = state.ones.toLocaleString();
+      zerosCount.textContent = state.zeros.toLocaleString();
+      zScore.textContent = `${score >= 0 ? "+" : ""}${score.toFixed(2)}σ`;
+
+      const width = Math.min(100, Math.abs(score) * 18);
+      bar.style.width = `${width}%`;
+      bar.style.marginLeft = score < 0 ? `${50 - width}%` : "50%";
+
+      interpretation.textContent = interpretationText(score);
+
+      const lastBits = state.ticks.slice(-384).join("");
+      bitStream.textContent = lastBits ? lastBits.replace(/(.{8})/g, "$1 ") : "Press “Begin run” to generate a bitstream.";
+
+      draw();
+    }
+
+    function addLog(kind, text, score = z()) {
+      if (log.querySelector(".note")) log.innerHTML = "";
+      const row = document.createElement("div");
+      row.className = "log-entry";
+      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      row.innerHTML = `<span>${time}</span><span><span class="tag">${kind}</span> ${text}</span><strong>${score >= 0 ? "+" : ""}${score.toFixed(2)}σ</strong>`;
+      log.prepend(row);
+    }
+
+    function step() {
+      const rate = Number($("rate").value);
+      const limit = Number($("limit").value);
+
+      for (let i = 0; i < rate; i++) {
+        const b = bit();
+        state.ticks.push(b);
+        state.n++;
+        if (b) state.ones++;
+        else state.zeros++;
+        state.history.push(state.ones - state.n / 2);
+
+        if (limit && state.n >= limit) {
+          stop(true);
+          break;
+        }
+      }
+
+      update();
+    }
+
+    function start() {
+      if (state.running) return;
+      state.running = true;
+      state.startedAt = new Date();
+      state.runNumber++;
+      $("toggle").textContent = "Stop run";
+      addLog("run", `#${state.runNumber} started · target: ${labelForTarget(state.target)}`);
+      state.timer = setInterval(step, 1000);
+      step();
+    }
+
+    function stop(completed = false) {
+      if (!state.running) return;
+      state.running = false;
+      clearInterval(state.timer);
+      state.timer = null;
+      $("toggle").textContent = "Begin run";
+      const score = z();
+      const duration = state.startedAt ? Math.round((Date.now() - state.startedAt.getTime()) / 1000) : 0;
+      addLog(completed ? "done" : "stop", `${state.n.toLocaleString()} bits · ${duration}s · ${state.ones} ones / ${state.zeros} zeros`, score);
+      update();
+    }
+
+    function reset() {
+      stop(false);
+      state.n = 0;
+      state.ones = 0;
+      state.zeros = 0;
+      state.ticks = [];
+      state.history = [];
+      state.startedAt = null;
+      update();
+      addLog("reset", "session cleared", 0);
+    }
+
+    function labelForTarget(target) {
+      return target === "high" ? "more 1s" : target === "low" ? "more 0s" : "observe";
+    }
+
+    document.querySelectorAll("[data-target]").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-target]").forEach(b => b.classList.remove("active"));
+        button.classList.add("active");
+        state.target = button.dataset.target;
+        addLog("target", labelForTarget(state.target));
+      });
+    });
+
+    $("toggle").addEventListener("click", () => state.running ? stop(false) : start());
+    $("reset").addEventListener("click", reset);
+    $("mark").addEventListener("click", () => addLog("mark", `${state.n.toLocaleString()} bits · ${state.ones} ones / ${state.zeros} zeros`));
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    update();
+  </script>
+</body>
+</html>
