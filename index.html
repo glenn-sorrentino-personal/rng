@@ -462,8 +462,8 @@
           <label>
             <span class="label">Source</span>
             <select class="field" id="source">
-              <option value="hardware" selected>Hardware TRNG via Web Serial</option>
-              <option value="browser">Browser CSPRNG fallback</option>
+              <option value="browser" selected>Browser CSPRNG fallback</option>
+              <option value="hardware">Hardware TRNG via Web Serial</option>
             </select>
           </label>
           <div class="inline">
@@ -662,21 +662,14 @@
     function interpretationText(score) {
       const abs = Math.abs(score);
       const p = pApprox(abs);
-      const direction = score > 0 ? "toward more 1s" : score < 0 ? "toward more 0s" : "at
-      expectation";
+      const direction = score > 0 ? "toward more 1s" : score < 0 ? "toward more 0s" : "at expectation";
 
-      if (state.n < 50) return "Too little data yet. Let the pre-set run continue before reading
-      the result.";
-      if (state.running) return `Live exploratory drift: ${direction}. Final p-value is shown when
-      the run completes.`;
-      if (abs < 1) return `Ordinary fluctuation: ${direction}. Two-tailed p approximately
-      ${p.toFixed(3)}.`;
-      if (abs < 2) return `Mild drift ${direction}. Common by chance. Two-tailed p approximately
-      ${p.toFixed(3)}.`;
-      if (abs < 3) return `Notable drift ${direction}. Repeat with pre-set runs. Two-tailed p
-      approximately ${p.toFixed(4)}.`;
-      return `Large drift ${direction}. Treat as a replication prompt, not a conclusion. Two-
-      tailed p approximately ${p.toExponential(2)}.`;
+      if (state.n < 50) return "Too little data yet. Let the pre-set run continue before reading the result.";
+      if (state.running) return `Live exploratory drift: ${direction}. Final p-value is shown when the run completes.`;
+      if (abs < 1) return `Ordinary fluctuation: ${direction}. Two-tailed p approximately ${p.toFixed(3)}.`;
+      if (abs < 2) return `Mild drift ${direction}. Common by chance. Two-tailed p approximately ${p.toFixed(3)}.`;
+      if (abs < 3) return `Notable drift ${direction}. Repeat with pre-set runs. Two-tailed p approximately ${p.toFixed(4)}.`;
+      return `Large drift ${direction}. Treat as a replication prompt, not a conclusion. Two-tailed p approximately ${p.toExponential(2)}.`;
     }
 
     function resizeCanvas() {
@@ -731,18 +724,14 @@
       const hardwareReady = serialState.connected && serialState.queue.length > 0;
 
       let status = "";
-      status += `<strong>Selected:</strong> ${selected === "hardware" ? "Hardware TRNG" : "Browser
-      CSPRNG"}<br>`;
+      status += `<strong>Selected:</strong> ${selected === "hardware" ? "Hardware TRNG" : "Browser CSPRNG"}<br>`;
       status += `<strong>Secure context:</strong> ${isSecure ? "yes" : "no"}<br>`;
       status += `<strong>Web Serial:</strong> ${hasSerial ? "available" : "unavailable"}<br>`;
-      status += `<strong>Hardware:</strong> ${serialState.connected ? `connected,
-      ${serialState.queue.length} bytes buffered` : "not connected"}<br>`;
-      status += `<strong>Browser crypto:</strong> ${browserReady ? "available" : "unavailable"}
-      <br>`;
+      status += `<strong>Hardware:</strong> ${serialState.connected ? `connected, ${serialState.queue.length} bytes buffered` : "not connected"}<br>`;
+      status += `<strong>Browser crypto:</strong> ${browserReady ? "available" : "unavailable"}<br>`;
 
       if (selected === "hardware" && !hardwareReady) {
-        status += "<strong>Run status:</strong> connect a hardware TRNG that streams raw random
-        bytes.";
+        status += "<strong>Run status:</strong> connect a hardware TRNG that streams raw random bytes.";
       } else if (selected === "browser") {
         status += "<strong>Run status:</strong> available, but this is not a physical true RNG.";
       } else {
@@ -755,8 +744,7 @@
 
     function updateRunAvailability() {
       const selected = source.value;
-      const canRunHardware = selected === "hardware" && serialState.connected &&
-      serialState.queue.length > 0;
+      const canRunHardware = selected === "hardware" && serialState.connected && serialState.queue.length > 0;
       const canRunBrowser = selected === "browser" && Boolean(browserBit);
       $("toggle").disabled = !state.running && !(canRunHardware || canRunBrowser);
     }
@@ -776,8 +764,7 @@
       interpretation.textContent = interpretationText(score);
 
       const lastBits = state.ticks.slice(-384).join("");
-      bitStream.textContent = lastBits ? lastBits.replace(/(.{8})/g, "$1 ") : 'Press "Begin run"
-      to generate a bitstream.';
+      bitStream.textContent = lastBits ? lastBits.replace(/(.{8})/g, "$1 ") : 'Press "Begin run" to generate a bitstream.';
 
       draw();
       updateRngStatus();
@@ -795,8 +782,7 @@
       row.className = "log-entry";
 
       const time = document.createElement("span");
-      time.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit",
-      second: "2-digit" });
+      time.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
       const body = document.createElement("span");
       const tag = document.createElement("span");
@@ -886,8 +872,7 @@
       setControlsLocked(true);
       $("toggle").textContent = "Stop run";
 
-      addLog("run", ` #${state.runNumber} started - ${sourceLabel(state.protocol.source)} -
-      target: ${labelForTarget(state.protocol.target)} - ${state.protocol.limit} bits`);
+      addLog("run", ` #${state.runNumber} started - ${sourceLabel(state.protocol.source)} - target: ${labelForTarget(state.protocol.target)} - ${state.protocol.limit} bits`);
       state.timer = setInterval(step, 1000);
       step();
     }
@@ -909,8 +894,7 @@
       const p = pApprox(Math.abs(score));
       const kind = completed ? "done" : "stop";
 
-      addLog(kind, ` ${state.n.toLocaleString()} bits - ${duration}s - ${state.ones} ones /
-      ${state.zeros} zeros - p~${p.toPrecision(3)}`, score);
+      addLog(kind, ` ${state.n.toLocaleString()} bits - ${duration}s - ${state.ones} ones / ${state.zeros} zeros - p~${p.toPrecision(3)}`, score);
 
       state.records.push({
         runNumber: state.runNumber,
@@ -1025,9 +1009,7 @@
         app: "Signal / Noise RNG Lab",
         version: "2026-06-18",
         exportedAt: new Date().toISOString(),
-        note: "Hardware source is a physical TRNG only when Web Serial hardware mode is connected.
-        Browser source is crypto.getRandomValues(), a cryptographically secure PRNG seeded by
-        system entropy.",
+        note: "Hardware source is a physical TRNG only when Web Serial hardware mode is connected. Browser source is crypto.getRandomValues(), a cryptographically secure PRNG seeded by system entropy.",
         records: state.records
       };
 
@@ -1058,8 +1040,7 @@
 
     $("toggle").addEventListener("click", () => state.running ? stop(false) : start());
     $("reset").addEventListener("click", reset);
-    $("mark").addEventListener("click", () => addLog("mark", ` ${state.n.toLocaleString()} bits -
-    ${state.ones} ones / ${state.zeros} zeros`));
+    $("mark").addEventListener("click", () => addLog("mark", ` ${state.n.toLocaleString()} bits - ${state.ones} ones / ${state.zeros} zeros`));
     $("connectSerial").addEventListener("click", connectSerial);
     $("disconnectSerial").addEventListener("click", disconnectSerial);
     $("exportJson").addEventListener("click", exportJson);
