@@ -4,8 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Signal / Noise - RNG Intention Lab</title>
-  <meta name="description" content="A single-page RNG intention experiment for GitHub Pages with
-  hardware TRNG support." />
+  <meta name="description" content="A single-page RNG intention experiment for GitHub Pages with hardware TRNG support." />
   <meta name="theme-color" content="#080b12" />
   <style>
     :root {
@@ -24,8 +23,7 @@
       --shadow: 0 20px 70px rgba(0,0,0,.42);
       --radius: 22px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     * { box-sizing: border-box; }
@@ -46,13 +44,13 @@
       display: flex;
       align-items: stretch;
       justify-content: center;
-      padding: 26px;
+      padding: 18px;
     }
 
     .app {
-      width: min(1180px, 100%);
+      width: min(1440px, 100%);
       display: grid;
-      grid-template-columns: 1.05fr .95fr;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
       gap: 18px;
     }
 
@@ -66,8 +64,8 @@
     }
 
     .hero {
-      padding: clamp(22px, 4vw, 42px);
-      min-height: calc(100vh - 52px);
+      padding: clamp(14px, 2vw, 22px);
+      min-height: calc(100vh - 36px);
       display: flex;
       flex-direction: column;
       position: relative;
@@ -105,7 +103,7 @@
       background: rgba(128,255,211,.07);
       padding: 9px 12px;
       border-radius: 999px;
-      margin-bottom: 24px;
+      margin-bottom: 0;
     }
 
     .dot {
@@ -118,22 +116,21 @@
 
     h1 {
       margin: 0;
-      font-size: clamp(42px, 7vw, 88px);
-      line-height: .88;
-      letter-spacing: -.07em;
-      max-width: 9ch;
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1;
+      letter-spacing: -.04em;
+      max-width: none;
     }
 
     .subtitle {
-      max-width: 62ch;
+      max-width: 70ch;
       color: var(--muted);
-      font-size: clamp(16px, 1.9vw, 20px);
-      line-height: 1.6;
-      margin: 24px 0 32px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 8px 0 0;
     }
 
     .experiment-card {
-      margin-top: auto;
       display: grid;
       grid-template-columns: 1fr;
       gap: 16px;
@@ -141,6 +138,19 @@
       border: 1px solid var(--line);
       background: rgba(0,0,0,.22);
       padding: 18px;
+      min-height: 100%;
+    }
+
+    .chart-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .title-block {
+      display: grid;
+      gap: 10px;
     }
 
     .stats-row {
@@ -154,7 +164,7 @@
       background: var(--panel2);
       border-radius: 18px;
       padding: 15px;
-      min-height: 92px;
+      min-height: 82px;
     }
 
     .label {
@@ -387,17 +397,19 @@
 
     .spark {
       width: 100%;
-      height: 150px;
+      height: clamp(360px, 58vh, 660px);
       border: 1px solid var(--line);
       background: rgba(0,0,0,.19);
       border-radius: 18px;
-      margin-top: 14px;
+      margin-top: 0;
     }
 
     @media (max-width: 900px) {
       body { padding: 12px; }
       .app { grid-template-columns: 1fr; }
       .hero { min-height: auto; }
+      .chart-header { grid-template-columns: 1fr; }
+      .spark { height: clamp(300px, 52vh, 520px); }
       .stats-row { grid-template-columns: repeat(2, 1fr); }
       .inline, .segmented { grid-template-columns: 1fr; }
       .log-entry { grid-template-columns: 1fr; }
@@ -411,16 +423,22 @@
 <body>
   <main class="app">
     <section class="hero" aria-label="Experiment overview">
-      <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Signal / Noise RNG Lab</
-      div>
-      <h1>Can intention tilt randomness?</h1>
-      <p class="subtitle">
-        Choose an intention, run a pre-set stream of random bits, and watch whether the cumulative
-        result drifts above or below chance. True RNG mode requires a connected hardware entropy
-        device.
-      </p>
-
       <div class="experiment-card">
+        <div class="chart-header">
+          <div class="title-block">
+            <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Signal / Noise RNG Lab</div>
+            <div>
+              <h1>Live randomness drift</h1>
+              <p class="subtitle">
+                Watch the cumulative bitstream deviation in real time. True RNG mode requires a
+                connected hardware entropy device; browser mode uses the Web Crypto CSPRNG.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <canvas id="chart" class="spark" width="1200" height="640" aria-label="Cumulative deviation chart"></canvas>
+
         <div class="stats-row">
           <div class="stat">
             <div class="label">Bits</div>
@@ -440,11 +458,8 @@
           </div>
         </div>
 
-        <canvas id="chart" class="spark" width="900" height="220" aria-label="Cumulative deviation
-        chart"></canvas>
         <div class="meter" aria-label="Bias meter"><div class="bar" id="bar"></div></div>
-        <div class="bits" id="bitStream" aria-live="polite">Press "Begin run" to generate a
-        bitstream.</div>
+        <div class="bits" id="bitStream" aria-live="polite">Press "Begin run" to generate a bitstream.</div>
       </div>
     </section>
 
